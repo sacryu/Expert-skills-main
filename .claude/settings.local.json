@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(awk NR==356:*)",
+      "Bash(awk NR==515:*)",
+      "Bash(awk NR==355:*)",
+      "Bash(ls:*)",
+      "Bash(tail:*)",
+      "Bash(pkill:*)",
+      "Bash(sleep 5:*)"
+    ]
+  }
+}
