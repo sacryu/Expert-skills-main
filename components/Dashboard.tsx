@@ -2,6 +2,8 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { Activity, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { RECENT_EXECUTIONS } from '../constants';
+import ProductionSalesMetricsBoard from './ProductionSalesMetricsBoard';
+import ProductOperationsBoard from './ProductOperationsBoard';
 
 const data = [
   { name: '08:00', success: 40, latency: 240 },
@@ -29,6 +31,13 @@ const KPICard = ({ title, value, icon, trend }: { title: string, value: string, 
 const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* 产销协同指标看板 */}
+      <ProductionSalesMetricsBoard />
+
+      {/* 产品经营看板 - 乘用车/商用车/储能 */}
+      <ProductOperationsBoard />
+
+      {/* 原有 KPI 卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard title="总执行次数" value="1,284" icon={<Activity size={20} />} trend="+12%" />
         <KPICard title="成功率" value="98.2%" icon={<CheckCircle size={20} />} trend="+0.4%" />

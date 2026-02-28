@@ -381,3 +381,89 @@ export interface DependencyLink {
   target: string;
   type: string;
 }
+
+// ==================== 推演分析系统 ====================
+
+/**
+ * 推演分析节点配置
+ */
+export interface SimulationNodeConfig {
+  nodeId: string;
+  nodeName: string;
+  scenarioId: string;
+  category: 'capacity_planning' | 'demand_forecast' | 'supply_chain' | 'production_scheduling' | 'investment_decision' | 'risk_assessment' | 'quality_prediction' | 'financial_analysis';
+  description: string;
+  inputParams: SimulationInputParam[];
+  outputMetrics: string[];
+  supportedSkills: string[];
+}
+
+/**
+ * 推演分析输入参数
+ */
+export interface SimulationInputParam {
+  id: string;
+  name: string;
+  description: string;
+  dataType: 'number' | 'string' | 'boolean' | 'date' | 'file';
+  required: boolean;
+  defaultValue?: any;
+  unit?: string;
+  source?: 'manual' | 'file_import' | 'system' | 'upstream_node';
+}
+
+/**
+ * 推演分析方案
+ */
+export interface SimulationSolution {
+  id: string;
+  name: string;
+  description: string;
+  inputData: Record<string, any>;
+  outputMetrics: Record<string, number>;
+  confidence: number;
+  cost?: number;
+  timeline?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
+}
+
+/**
+ * 推演分析报告
+ */
+export interface SimulationReport {
+  id: string;
+  nodeId: string;
+  nodeName: string;
+  timestamp: string;
+  inputData: Record<string, any>;
+  uploadedFiles: string[];
+  usedSkills: string[];
+  conversation: SimulationConversationMessage[];
+  solutions: SimulationSolution[];
+  comparisonMatrix: SolutionComparison[];
+  recommendation: string;
+}
+
+/**
+ * 推演对话消息
+ */
+export interface SimulationConversationMessage {
+  id: string;
+  role: 'user' | 'ai' | 'system';
+  content: string;
+  timestamp: string;
+  skillId?: string;
+}
+
+/**
+ * 方案对比项
+ */
+export interface SolutionComparison {
+  metric: string;
+  unit: string;
+  solutions: {
+    solutionId: string;
+    value: number;
+    rank: number;
+  }[];
+}

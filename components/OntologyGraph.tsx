@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import * as d3 from 'd3';
 import {
@@ -13,12 +13,16 @@ import {
   PRODUCTION_SALES_SEMANTICS,
   MOCK_SKILLS,
   ATOMIC_ONTOLOGY_LIBRARY,
-  getRequirementsByProcessNode
+  getRequirementsByProcessNode,
+  isSimulationNode,
+  getSimulationConfig,
+  SIMULATION_NODES
 } from '../constants';
-import { OntologyNode, OntologyLink, BusinessScenario } from '../types';
-import { Layers, Plus, Trash2, Edit3, Box, PenTool, X, User, FileText, Database, Clock, AlertCircle, ArrowUp, ArrowDown, CheckCircle2, Circle, Loader2, Upload, FileUp, CheckCircle, RotateCcw, ZoomIn, ZoomOut, Lightbulb, Zap, Atom, ChevronRight } from 'lucide-react';
+import { OntologyNode, OntologyLink, BusinessScenario, SimulationNodeConfig } from '../types';
+import { Layers, Plus, Trash2, Edit3, Box, PenTool, X, User, FileText, Database, Clock, AlertCircle, ArrowUp, ArrowDown, CheckCircle2, Circle, Loader2, Upload, FileUp, CheckCircle, RotateCcw, ZoomIn, ZoomOut, Lightbulb, Zap, Atom, ChevronRight, MessageCircle } from 'lucide-react';
 import ScenarioBuilder from './ScenarioBuilder';
 import OntologyGraphEditor from './OntologyGraphEditor';
+import SimulationModal from './SimulationModal';
 
 const OntologyGraph: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,6 +48,11 @@ const OntologyGraph: React.FC = () => {
   const [showNodeDetail, setShowNodeDetail] = useState(false);
   const setSelectedNodeRef = useRef(setSelectedNode);
   const setShowNodeDetailRef = useRef(setShowNodeDetail);
+
+  // 推演分析弹窗状态
+  const [showSimulationModal, setShowSimulationModal] = useState(false);
+  const [simulationNode, setSimulationNode] = useState<OntologyNode | null>(null);
+  const [simulationConfig, setSimulationConfig] = useState<SimulationNodeConfig | null>(null);
 
   // 更新 ref
   useEffect(() => {
@@ -180,8 +189,16 @@ const OntologyGraph: React.FC = () => {
 
   // 节点点击处理
   const handleNodeClick = (node: OntologyNode) => {
-    setSelectedNode(node);
-    setShowNodeDetail(true);
+    // 检查是否为推演分析节点
+    const simConfig = getSimulationConfig(node.id);
+    if (simConfig) {
+      setSimulationNode(node);
+      setSimulationConfig(simConfig);
+      setShowSimulationModal(true);
+    } else {
+      setSelectedNode(node);
+      setShowNodeDetail(true);
+    }
   };
 
   // 处理缩放
@@ -328,6 +345,53 @@ const OntologyGraph: React.FC = () => {
       })
       .attr('stroke', '#fff')
       .attr('stroke-width', 1);
+
+    // 推演节点标记 - 外圈紫色光环效果
+    nodeGroups.each(function(d: any) {
+      if (isSimulationNode(d.id)) {
+        const g = d3.select(this);
+        const radius = nodeRadius(d.group);
+
+        // 外发光效果 - 使用渐变填充
+        g.append('circle')
+          .attr('class', 'simulation-glow')
+          .attr('r', radius + 12)
+          .attr('fill', 'rgba(99, 102, 241, 0.15)')
+          .attr('stroke', '#6366f1')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', '5,3');
+
+        // 中环装饰
+        g.append('circle')
+          .attr('class', 'simulation-ring-middle')
+          .attr('r', radius + 6)
+          .attr('fill', 'none')
+          .attr('stroke', '#818cf8')
+          .attr('stroke-width', 1.5)
+          .attr('opacity', 0.8);
+
+        // 推演标签 - 在节点上方显示"推演"标识
+        g.append('rect')
+          .attr('class', 'simulation-badge-bg')
+          .attr('x', -18)
+          .attr('y', -radius - 28)
+          .attr('width', 36)
+          .attr('height', 14)
+          .attr('rx', 7)
+          .attr('fill', '#6366f1')
+          .attr('stroke', '#fff')
+          .attr('stroke-width', 1);
+
+        g.append('text')
+          .attr('class', 'simulation-badge-text')
+          .attr('text-anchor', 'middle')
+          .attr('y', -radius - 18)
+          .attr('font-size', '8px')
+          .attr('font-weight', 'bold')
+          .attr('fill', '#fff')
+          .text('推演');
+      }
+    });
 
     // 节点标签 - 下方，等宽字体风格
     nodeGroups.append('text')
@@ -477,7 +541,9 @@ const OntologyGraph: React.FC = () => {
                                 <div className="flex items-center">
                                     <span className="font-medium flex-1">{scene.name}</span>
                                     {isDynamic && (
-                                        <Box size={12} className="text-indigo-400 ml-1" title="动态场景" />
+                                        <span title="动态场景">
+                                            <Box size={12} className="text-indigo-400 ml-1" />
+                                        </span>
                                     )}
                                 </div>
                                 <span className="text-xs text-slate-400 mt-1 line-clamp-1">{scene.description}</span>
@@ -592,6 +658,22 @@ const OntologyGraph: React.FC = () => {
           }}
         />
       )}
+
+      {/* 推演分析弹窗 */}
+      {showSimulationModal && simulationNode && simulationConfig && (
+        <SimulationModal
+          isOpen={showSimulationModal}
+          node={simulationNode}
+          config={simulationConfig}
+          allNodes={getScenarioOntologyData(activeScenarioId)?.nodes || []}
+          allLinks={getScenarioOntologyData(activeScenarioId)?.links || []}
+          onClose={() => {
+            setShowSimulationModal(false);
+            setSimulationNode(null);
+            setSimulationConfig(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -607,6 +689,21 @@ const slideInAnimation = `
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+@keyframes simulationPulse {
+  0%, 100% {
+    stroke-opacity: 0.6;
+    stroke-width: 2;
+  }
+  50% {
+    stroke-opacity: 1;
+    stroke-width: 3;
+  }
+}
+
+.simulation-glow {
+  animation: simulationPulse 2s ease-in-out infinite;
 }
 `;
 
@@ -1187,5 +1284,6 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
     </>
   );
 };
+
 
 export default OntologyGraph;

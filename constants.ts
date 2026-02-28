@@ -1,4 +1,4 @@
-import { Skill, OntologyData, ExecutionLog, Scenario, OntologyNode, OntologyLink, AtomicOntology, BusinessScenario, MolecularOntology } from './types';
+import { Skill, OntologyData, ExecutionLog, Scenario, OntologyNode, OntologyLink, AtomicOntology, BusinessScenario, MolecularOntology, SimulationNodeConfig } from './types';
 
 export const SCENARIOS: Scenario[] = [
   { id: 'raw_material', name: '1. 原材料管理', description: '正负极材料、隔膜、电解液的入库质检与追溯' },
@@ -16,6 +16,8 @@ export const SCENARIOS: Scenario[] = [
   { id: 'breakdown_maintenance', name: '13. 设备故障维修', description: '维修工时预测、备件物流与专家调度' },
   { id: 'cost_management', name: '14. 经营成本管理', description: '单吨成本分析、能耗审计与库存周转优化' },
   { id: 'production_sales_match', name: '15. 产销匹配协同', description: '需求预测、产能平衡、库存优化与订单履约协同' },
+  { id: 'new_project_planning', name: '16. 新项目落地推演分析', description: '新产线投资决策分析、选址评估、财务测算与风险推演' },
+  { id: 'capacity_assessment_prediction', name: '17. 产能评估推演预测分析', description: '现有产能评估、需求预测、产能缺口分析、投资决策推演与风险模拟' },
 ];
 
 export const MOCK_SKILLS: Skill[] = [
@@ -536,6 +538,376 @@ export const MOCK_SKILLS: Skill[] = [
       script: "def check_balance(production, sales, inventory, market):\n    alerts = []\n    gap = sum(sales) - sum(production)\n    if gap > 0:\n        alerts.append({'type': 'shortage', 'severity': 'high', 'gap': gap})\n    elif utilization < 0.7:\n        alerts.append({'type': 'excess', 'severity': 'medium', 'recommendation': 'promotion'})\n    return alerts",
       scriptLang: "python"
     }
+  },
+  // ========== 新项目落地推演分析场景技能 ==========
+  {
+    skill_id: "npv_calculator_v1",
+    name: "投资项目NPV/IRR计算器",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["finance", "investment", "npv", "irr"],
+    input_schema: {
+      initial_investment: "number",
+      cash_flows: "array",
+      discount_rate: "number",
+      project_lifecycle: "number"
+    },
+    output_schema: {
+      npv: "number",
+      irr: "number",
+      payback_period: "number",
+      profitability_index: "number"
+    },
+    cost: 0.3,
+    latency: 500,
+    accuracy_score: 0.96,
+    dependencies: [],
+    description: "计算新生产线投资项目的净现值(NPV)、内部收益率(IRR)、投资回收期等关键财务指标。",
+    files: {
+      readme: "# NPV/IRR Calculator\n\n## 概述\n基于现金流折现法的投资项目财务评估工具。\n\n## 计算逻辑\n- NPV = ∑(CF_t / (1+r)^t) - Initial_Investment\n- IRR: 使NPV=0的折现率\n- 回收期: 累计现金流转正的时间点\n\n## 应用场景\n- 新产线投资决策\n- 扩建 vs 新建方案比选\n- 不同选址方案的经济性评估",
+      config: "{\"default_discount_rate\": 0.10, \"tax_rate\": 0.25}",
+      script: "def calculate_npv_irr(investment, cash_flows, discount_rate, lifecycle):\n    npv = -investment + sum([cf / (1+discount_rate)**t for t, cf in enumerate(cash_flows)])\n    irr = calculate_irr(cash_flows, investment)\n    payback = calculate_payback(cash_flows, investment)\n    return {'npv': npv, 'irr': irr, 'payback_period': payback}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "location_optimizer_v1",
+    name: "生产基地选址优化器",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["location", "optimization", "supply_chain", "multi_criteria"],
+    input_schema: {
+      candidate_locations: "array",
+      customer_locations: "array",
+      supplier_locations: "array",
+      cost_factors: "object",
+      constraint_weights: "object"
+    },
+    output_schema: {
+      ranked_locations: "array",
+      cost_breakdown: "object",
+      risk_assessment: "object",
+      recommendation: "string"
+    },
+    cost: 0.6,
+    latency: 2000,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "综合考虑供应链距离、物流成本、土地价格、人工成本、税收政策、环保约束等多因素，为新建产线推荐最优选址。",
+    files: {
+      readme: "# Location Optimizer\n\n## 概述\n多目标优化算法驱动的生产基地选址决策支持系统。\n\n## 评估维度\n1. **供应链成本**: 原材料运输 + 成品配送\n2. **运营成本**: 土地 + 人工 + 能源 + 税收\n3. **风险因素**: 环保政策 + 劳动力供给 + 地方财政\n4. **战略价值**: 靠近客户 + 产业集群 + 扩展空间\n\n## 算法\nAHP层次分析法 + TOPSIS理想解排序",
+      config: "{\"transport_cost_per_km\": 0.5, \"logistics_weight\": 0.3, \"labor_weight\": 0.25}",
+      script: "def optimize_location(candidates, customers, suppliers, costs, weights):\n    scores = {}\n    for loc in candidates:\n        logistics_cost = calc_logistics(loc, customers, suppliers)\n        operating_cost = calc_operating(loc, costs)\n        risk_score = assess_risk(loc)\n        scores[loc] = weighted_score(logistics_cost, operating_cost, risk_score, weights)\n    return rank_locations(scores)",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "risk_simulator_v1",
+    name: "投资风险情景模拟器",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["risk", "simulation", "monte_carlo", "sensitivity"],
+    input_schema: {
+      base_case: "object",
+      risk_scenarios: "array",
+      simulation_runs: "number",
+      confidence_level: "number"
+    },
+    output_schema: {
+      scenario_results: "array",
+      probability_distribution: "object",
+      var_metrics: "object",
+      sensitivity_ranking: "array"
+    },
+    cost: 0.8,
+    latency: 5000,
+    accuracy_score: 0.87,
+    dependencies: ["npv_calculator_v1"],
+    description: "通过蒙特卡洛模拟评估投资项目在不同风险情景下的表现，识别关键风险因子并量化潜在损失。",
+    files: {
+      readme: "# Risk Simulator\n\n## 概述\n基于蒙特卡洛模拟的投资风险评估工具。\n\n## 风险情景\n- 销量下滑（-20%、-30%、-50%）\n- 原材料涨价（+20%、+30%、+50%）\n- 建设延期（6个月、12个月、18个月）\n- 政策变化（补贴取消、环保加码）\n\n## 输出\n- 概率分布直方图\n- VaR风险价值\n- 敏感性排序",
+      config: "{\"simulation_runs\": 10000, \"confidence_level\": 0.95}",
+      script: "def simulate_risks(base_case, scenarios, runs, confidence):\n    results = []\n    for _ in range(runs):\n        scenario = sample_scenario(scenarios)\n        result = run_simulation(base_case, scenario)\n        results.append(result)\n    return analyze_distribution(results, confidence)",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "market_forecast_v2",
+    name: "新市场机会预测",
+    version: "2.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["market", "forecast", "demand", "growth"],
+    input_schema: {
+      target_market: "string",
+      product_segment: "string",
+      historical_data: "array",
+      macro_indicators: "object",
+      competitor_dynamics: "object"
+    },
+    output_schema: {
+      market_size_forecast: "array",
+      growth_rate: "number",
+      market_share_potential: "number",
+      entry_timing: "string",
+      key_success_factors: "array"
+    },
+    cost: 0.5,
+    latency: 1500,
+    accuracy_score: 0.85,
+    dependencies: ["demand_forecast_v3"],
+    description: "预测目标市场（乘用车/商用车/储能）未来5-10年的需求规模和增长趋势，评估市场进入时机。",
+    files: {
+      readme: "# Market Forecast\n\n## 概述\n针对锂电新产能投资决策的市场需求预测模型。\n\n## 分析维度\n- **TAM/SAM/SOM**: 总体/可服务/可获得市场\n- **增长驱动因素**: 政策、技术、成本、竞争\n- **渗透率曲线**: 早期/成长期/成熟期\n- **区域差异**: 国内/海外、一线/下沉市场\n\n## 应用场景\n- 新产线产能规划\n- 产品线布局决策\n- 市场进入时机选择",
+      config: "{\"forecast_horizon_years\": 10, \"growth_model\": \"bass_diffusion\"}",
+      script: "def forecast_market(market, segment, historical, macro, competitors):\n    tam = calc_total_addressable_market(macro)\n    growth_rate = project_growth(historical, macro)\n    share_potential = assess_competitive_position(competitors)\n    return {'market_size': tam, 'growth': growth_rate, 'share': share_potential}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "capex_analyzer_v1",
+    name: "资本支出结构分析",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["capex", "investment", "cost_structure"],
+    input_schema: {
+      capacity_gwh: "number",
+      technology_type: "string",
+      automation_level: "string",
+      location_factor: "number"
+    },
+    output_schema: {
+      total_capex: "number",
+      cost_breakdown: "object",
+      unit_investment: "number",
+      working_capital: "number",
+      financing_requirement: "number"
+    },
+    cost: 0.4,
+    latency: 800,
+    accuracy_score: 0.92,
+    dependencies: [],
+    description: "估算新建产线的资本支出结构，包括设备投资、厂房建设、土地购置、流动资金等各项明细。",
+    files: {
+      readme: "# CAPEX Analyzer\n\n## 概述\n锂电产线资本支出估算模型。\n\n## 成本构成\n1. **设备投资** (60-70%): 涂布、卷绕、化成、分容等关键设备\n2. **厂房建设** (15-20%): 洁净厂房、公用工程、配套设施\n3. **土地购置** (5-10%): 根据地区地价差异较大\n4. **流动资金** (10-15%): 原材料、在制品、应收账款\n\n## 调整因子\n- 产能规模（规模经济）\n- 自动化程度\n- 地区成本差异",
+      config: "{\"base_unit_cost_yuan_per_wh\": 0.35, \"scale_factor\": 0.85}",
+      script: "def analyze_capex(capacity_gwh, tech_type, automation, location_factor):\n    base_capex = capacity_gwh * 1e9 * 0.35  # 元/Wh基准\n    equipment_ratio = 0.65 if automation == 'high' else 0.60\n    building_ratio = 0.15\n    land_ratio = 0.08 * location_factor\n    working_capital_ratio = 0.12\n    return calculate_breakdown(base_capex, equipment_ratio, building_ratio, land_ratio, working_capital_ratio)",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "sensitivity_analysis_v1",
+    name: "投资决策敏感性分析",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["sensitivity", "tornado", "what_if", "break_even"],
+    input_schema: {
+      base_case_npv: "number",
+      variable_ranges: "object",
+      output_metrics: "array"
+    },
+    output_schema: {
+      tornado_chart: "array",
+      spider_chart: "array",
+      break_even_points: "object",
+      critical_variables: "array"
+    },
+    cost: 0.4,
+    latency: 1000,
+    accuracy_score: 0.94,
+    dependencies: ["npv_calculator_v1"],
+    description: "分析投资项目中各变量（销量、价格、成本、建设周期等）对NPV的敏感程度，识别关键决策因子。",
+    files: {
+      readme: "# Sensitivity Analysis\n\n## 概述\n tornado龙卷风图分析工具。\n\n## 分析变量\n- 销售量（±20%）\n- 销售价格（±15%）\n- 原材料成本（±30%）\n- 建设周期（±6个月）\n- 折现率（±2%）\n\n## 输出\n- 敏感性排序\n- 盈亏平衡点\n- 关键变量识别",
+      config: "{\"variation_range\": 0.20, \"steps\": 5}",
+      script: "def sensitivity_analysis(base_npv, variable_ranges, metrics):\n    tornado_data = []\n    for var, range_val in variable_ranges.items():\n        low_npv = calc_npv(var, -range_val)\n        high_npv = calc_npv(var, range_val)\n        sensitivity = abs(high_npv - low_npv)\n        tornado_data.append({'variable': var, 'low': low_npv, 'high': high_npv, 'sensitivity': sensitivity})\n    return sort_by_sensitivity(tornado_data)",
+      scriptLang: "python"
+    }
+  },
+  // ========== 产能评估推演预测分析场景技能 ==========
+  {
+    skill_id: "oee_analyzer_v1",
+    name: "OEE综合效率分析器",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["oee", "efficiency", "performance", "analysis"],
+    input_schema: {
+      availability_data: "object",
+      performance_data: "object",
+      quality_data: "object",
+      time_period: "string"
+    },
+    output_schema: {
+      oee_score: "number",
+      availability_rate: "number",
+      performance_rate: "number",
+      quality_rate: "number",
+      improvement_opportunities: "array"
+    },
+    cost: 0.3,
+    latency: 600,
+    accuracy_score: 0.95,
+    dependencies: [],
+    description: "计算锂电产线OEE（设备综合效率），识别时间损失、性能损失和质量损失，提供改善建议。",
+    files: {
+      readme: "# OEE Analyzer\n\n## 概述\n设备综合效率（OEE）分析工具，基于锂电行业特点优化。\n\n## 计算公式\n- OEE = 时间开动率 × 性能开动率 × 质量合格率\n- 时间开动率 = 实际运行时间 / 计划工作时间\n- 性能开动率 = 实际产出 / 理论产出\n- 质量合格率 = 合格品数 / 总产出数\n\n## 应用场景\n- 产能评估\n- 瓶颈识别\n- 改善机会发现",
+      config: "{\"world_class_oee\": 0.85, \"target_oee\": 0.80}",
+      script: "def analyze_oee(availability, performance, quality, period):\n    availability_rate = availability.actual_time / availability.planned_time\n    performance_rate = performance.actual_output / performance.theoretical_output\n    quality_rate = quality.good_units / quality.total_units\n    oee = availability_rate * performance_rate * quality_rate\n    improvements = identify_losses(availability, performance, quality)\n    return {'oee': oee, 'availability': availability_rate, 'performance': performance_rate, 'quality': quality_rate, 'improvements': improvements}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "bottleneck_identifier_v1",
+    name: "产线瓶颈识别器",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["bottleneck", "constraint", "throughput", "optimization"],
+    input_schema: {
+      process_data: "array",
+      cycle_times: "object",
+      wip_levels: "object",
+      utilization_rates: "object"
+    },
+    output_schema: {
+      bottleneck_processes: "array",
+      constraint_analysis: "object",
+      capacity_utilization: "object",
+      improvement_recommendations: "array"
+    },
+    cost: 0.4,
+    latency: 800,
+    accuracy_score: 0.92,
+    dependencies: [],
+    description: "基于TOC约束理论识别锂电产线瓶颈工序（涂布/卷绕/化成/分容等），分析产能限制因素。",
+    files: {
+      readme: "# Bottleneck Identifier\n\n## 概述\n基于约束理论（TOC）的产线瓶颈识别工具。\n\n## 分析维度\n- 工序周期时间对比\n- 设备利用率分析\n- 在制品（WIP）堆积情况\n- 产出节拍差异\n\n## 锂电行业重点\n- 涂布工序：面密度控制\n- 卷绕工序：对齐度要求\n- 化成工序：充放电时间\n- 分容工序：容量测试时长",
+      config: "{\"bottleneck_threshold\": 0.90, \"wip_threshold\": 1000}",
+      script: "def identify_bottlenecks(processes, cycle_times, wip, utilization):\n    bottlenecks = []\n    for process in processes:\n        if utilization[process] > 0.90 or wip[process] > 1000:\n            bottlenecks.append(process)\n    return {'bottlenecks': bottlenecks, 'analysis': analyze_constraint_impact(bottlenecks)}"
+      ,
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "equipment_health_monitor_v1",
+    name: "设备健康度监测器",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["health", "equipment", "monitoring", "prediction"],
+    input_schema: {
+      vibration_data: "array",
+      temperature_data: "array",
+      maintenance_history: "array",
+      runtime_hours: "number"
+    },
+    output_schema: {
+      health_score: "number",
+      remaining_useful_life: "number",
+      risk_level: "string",
+      maintenance_recommendations: "array"
+    },
+    cost: 0.5,
+    latency: 700,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "评估关键生产设备（涂布机、卷绕机、化成柜等）的健康状态，预测剩余使用寿命。",
+    files: {
+      readme: "# Equipment Health Monitor\n\n## 概述\n关键生产设备健康状态评估与预测工具。\n\n## 监测指标\n- 振动频谱分析\n- 温度趋势监测\n- 维护历史分析\n- 运行时间统计\n\n## 输出结果\n- 健康度评分（0-100）\n- 剩余使用寿命预测\n- 风险等级评估\n- 维护建议",
+      config: "{\"health_threshold_good\": 80, \"health_threshold_warning\": 60}",
+      script: "def monitor_health(vibration, temperature, maintenance, runtime):\n    health_score = calculate_health_score(vibration, temperature, maintenance)\n    rul = predict_rul(health_score, runtime)\n    risk = assess_risk_level(health_score)\n    return {'health': health_score, 'rul': rul, 'risk': risk, 'recommendations': generate_recommendations(health_score)}"
+      ,
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "roi_calculator_v1",
+    name: "产能投资ROI计算器",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["roi", "investment", "capacity", "return"],
+    input_schema: {
+      investment_amount: "number",
+      incremental_revenue: "number",
+      incremental_cost: "number",
+      project_lifecycle: "number"
+    },
+    output_schema: {
+      roi_percentage: "number",
+      annual_return: "number",
+      payback_period: "number",
+      cumulative_cash_flow: "array"
+    },
+    cost: 0.3,
+    latency: 500,
+    accuracy_score: 0.94,
+    dependencies: [],
+    description: "计算产能扩张投资的ROI（投资回报率）、年化收益和投资回收期。",
+    files: {
+      readme: "# ROI Calculator\n\n## 概述\n产能扩张投资回报率计算工具。\n\n## 计算逻辑\n- ROI = (收益 - 成本) / 投资 × 100%\n- 年化收益 = 年增量收入 - 年增量成本\n- 回收期 = 投资额 / 年净收益\n\n## 应用场景\n- 产线扩产决策\n- 新线投资评估\n- 自动化改造ROI分析",
+      config: "{\"target_roi\": 0.15, \"max_payback_years\": 5}",
+      script: "def calculate_roi(investment, revenue, cost, lifecycle):\n    annual_profit = revenue - cost\n    roi = (annual_profit * lifecycle - investment) / investment\n    payback = investment / annual_profit\n    cash_flow = calculate_cumulative_cash_flow(investment, annual_profit, lifecycle)\n    return {'roi': roi, 'annual_return': annual_profit, 'payback': payback, 'cash_flow': cash_flow}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "production_simulator_v1",
+    name: "产能生产推演模拟器",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["simulation", "production", "capacity", "what_if"],
+    input_schema: {
+      capacity_config: "object",
+      demand_scenario: "object",
+      production_constraints: "object",
+      simulation_period: "number"
+    },
+    output_schema: {
+      production_output: "array",
+      capacity_utilization: "array",
+      fulfillment_rate: "number",
+      scenario_comparison: "object"
+    },
+    cost: 0.7,
+    latency: 2000,
+    accuracy_score: 0.88,
+    dependencies: ["capacity_evaluation_v2"],
+    description: "基于不同产能配置方案进行生产推演模拟，评估需求满足率和产能利用率。",
+    files: {
+      readme: "# Production Simulator\n\n## 概述\n产能配置方案推演模拟工具。\n\n## 模拟场景\n- 现有产能配置\n- 扩产方案A/B\n- 新建产线方案\n- 委外加工组合\n\n## 输出指标\n- 产出预测\n- 产能利用率\n- 订单满足率\n- 情景对比分析",
+      config: "{\"simulation_months\": 12, \"confidence_level\": 0.95}",
+      script: "def simulate_production(capacity, demand, constraints, period):\n    outputs = []\n    utilization = []\n    for month in range(period):\n        output = calculate_monthly_output(capacity, demand[month], constraints)\n        outputs.append(output)\n        utilization.append(output / capacity.total)\n    fulfillment = sum(outputs) / sum(demand)\n    return {'outputs': outputs, 'utilization': utilization, 'fulfillment': fulfillment}"
+      ,
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "risk_assessor_v1",
+    name: "产能规划风险评估器",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["risk", "assessment", "capacity", "planning"],
+    input_schema: {
+      market_risks: "object",
+      operational_risks: "object",
+      financial_risks: "object",
+      mitigation_strategies: "array"
+    },
+    output_schema: {
+      overall_risk_score: "number",
+      risk_breakdown: "object",
+      high_impact_risks: "array",
+      mitigation_recommendations: "array"
+    },
+    cost: 0.5,
+    latency: 1000,
+    accuracy_score: 0.87,
+    dependencies: [],
+    description: "评估产能规划方案的多维度风险（市场、运营、财务），提供风险缓释建议。",
+    files: {
+      readme: "# Risk Assessor\n\n## 概述\n产能规划风险评估与管理工具。\n\n## 风险维度\n- 市场风险：需求波动、竞争加剧\n- 运营风险：设备故障、人员流失\n- 财务风险：资金压力、汇率波动\n- 政策风险：环保政策、能耗双控\n\n## 输出结果\n- 综合风险评分\n- 高风险项识别\n- 缓释策略建议",
+      config: "{\"risk_threshold_low\": 30, \"risk_threshold_high\": 70}",
+      script: "def assess_risks(market, operational, financial, strategies):\n    market_score = assess_market_risk(market)\n    operational_score = assess_operational_risk(operational)\n    financial_score = assess_financial_risk(financial)\n    overall = calculate_weighted_risk(market_score, operational_score, financial_score)\n    high_risks = identify_high_impact_risks(market, operational, financial)\n    return {'overall_score': overall, 'breakdown': {'market': market_score, 'operational': operational_score, 'financial': financial_score}, 'high_risks': high_risks, 'recommendations': generate_mitigation_strategies(high_risks)}"
+      ,
+      scriptLang: "python"
+    }
   }
 ];
 
@@ -720,6 +1092,171 @@ const SCENARIO_CONFIGS: Record<string, ScenarioGraphConfig> = {
             'delivery_planning': ['路径优化', '时间窗约束', '装载优化'],
             'shipment_tracking': ['GPS跟踪', 'ETA预测', '异常预警'],
             'carrier_management': ['承运商选择', '费率谈判', '绩效评估']
+        }
+    },
+    'new_project_planning': {
+        // 新项目落地推演分析 - 5层决策结构
+        l2: [
+            { id: 'strategic_decision', name: '战略层决策' },
+            { id: 'market_analysis', name: '需求与市场层' },
+            { id: 'capacity_manufacturing', name: '产能与制造层' },
+            { id: 'finance_investment', name: '财务与投资层' },
+            { id: 'risk_constraints', name: '风险与约束层' }
+        ],
+        l3: {
+            'strategic_decision': [
+                { id: 'use_existing_line', name: '是否使用现有产线' },
+                { id: 'add_new_capacity', name: '是否需要新增产能' },
+                { id: 'expand_or_new', name: '扩建还是新建' },
+                { id: 'location_selection', name: '新建地址选择' },
+                { id: 'tech_upgrade', name: '技术路线升级' },
+                { id: 'phased_investment', name: '是否分阶段投建' },
+                { id: 'customer_partnership', name: '是否与客户共建' },
+                { id: 'gov_policy_support', name: '政府政策支持' }
+            ],
+            'market_analysis': [
+                { id: 'order_commitment', name: '客户订单锁定比例' },
+                { id: 'contract_duration', name: '合同周期长度' },
+                { id: 'demand_volatility', name: '需求波动性' },
+                { id: 'customer_concentration', name: '客户集中度' },
+                { id: 'price_trend', name: '销售价格趋势' },
+                { id: 'product_lifecycle', name: '产品生命周期预测' },
+                { id: 'tech_substitution', name: '技术替代风险' }
+            ],
+            'capacity_manufacturing': [
+                { id: 'current_utilization', name: '当前产能利用率' },
+                { id: 'oee_analysis', name: 'OEE设备综合效率' },
+                { id: 'yield_rate', name: '良率水平' },
+                { id: 'tech_compatibility', name: '技术适配性' },
+                { id: 'equipment_age', name: '设备老化程度' },
+                { id: 'retrofit_feasibility', name: '改造可行性' },
+                { id: 'switching_cost', name: '切换成本' },
+                { id: 'capacity_flexibility', name: '产能弹性空间' },
+                { id: 'staffing_match', name: '人员匹配度' }
+            ],
+            'finance_investment': [
+                { id: 'capex_investment', name: 'CAPEX投资额' },
+                { id: 'construction_cycle', name: '建设周期' },
+                { id: 'equipment_delivery', name: '设备交付周期' },
+                { id: 'land_acquisition', name: '土地获取周期' },
+                { id: 'policy_approval', name: '政策审批周期' },
+                { id: 'automation_level', name: '自动化水平' },
+                { id: 'unit_cost_forecast', name: '单位制造成本预测' },
+                { id: 'energy_cost', name: '能耗成本' },
+                { id: 'depreciation_period', name: '折旧年限' },
+                { id: 'economies_scale', name: '规模经济临界点' },
+                { id: 'expansion_potential', name: '未来扩展能力' },
+                { id: 'digital_infrastructure', name: '数字化基础设施' }
+            ],
+            'risk_constraints': [
+                { id: 'sales_decline_scenario', name: '销量下降20%情景' },
+                { id: 'material_price_rise', name: '原材料上涨30%' },
+                { id: 'customer_default', name: '客户违约风险' },
+                { id: 'tech_route_substitution', name: '技术路线替代' },
+                { id: 'subsidy_removal', name: '政策补贴取消' },
+                { id: 'delay_production_risk', name: '延期投产风险' },
+                { id: 'equipment_delay', name: '设备交付延迟' },
+                { id: 'approval_delay', name: '环保审批延迟' },
+                { id: 'exchange_rate_risk', name: '汇率风险' },
+                { id: 'strategic_shift_risk', name: '战略转型风险' }
+            ]
+        },
+        l4: {
+            'use_existing_line': ['现有产线产能', '改造成本评估', '停产损失'],
+            'add_new_capacity': ['产能缺口分析', '投资回收期', '市场需求预测'],
+            'expand_or_new': ['扩建成本', '新建成本', '建设周期对比'],
+            'location_selection': ['供应链距离', '物流成本', '土地价格', '人工成本', '电价', '税收政策', '环保政策', '产业集群'],
+            'tech_upgrade': ['新工艺导入', '自动化升级', '数字化改造', '良率提升潜力'],
+            'phased_investment': ['一期产能', '二期扩展', '资金压力分散'],
+            'customer_partnership': ['绑定协议', '共建模式', '风险分担'],
+            'gov_policy_support': ['税收优惠', '土地补贴', '能耗指标', '产业基金'],
+            'order_commitment': ['订单覆盖率', '违约条款', '客户信用评级'],
+            'contract_duration': ['长期合约占比', '价格调整机制', '续约概率'],
+            'demand_volatility': ['季节性波动', '市场不确定性', '预测准确率'],
+            'current_utilization': ['产线利用率', '峰值负荷', '瓶颈工序'],
+            'oee_analysis': ['时间开动率', '性能开动率', '合格品率'],
+            'capex_investment': ['设备投资', '厂房建设', '土地购置', '流动资金'],
+            'construction_cycle': ['土建周期', '设备安装', '调试爬坡', '量产时间'],
+            'sales_decline_scenario': ['盈亏平衡点', '现金流压力', '产能消化'],
+            'material_price_rise': ['成本传导', '价格谈判', '供应商管理']
+        }
+    },
+    'capacity_assessment_prediction': {
+        // 产能评估推演预测分析 - 锂电企业产能规划（供给侧视角）
+        l2: [
+            { id: 'current_capacity', name: '现有产能评估' },
+            { id: 'supply_capability', name: '产能供给能力评估' },
+            { id: 'capacity_expansion', name: '产能扩展潜力' },
+            { id: 'capacity_planning', name: '产能规划方案' },
+            { id: 'investment_decision', name: '投资决策推演' },
+            { id: 'risk_simulation', name: '风险情景模拟' }
+        ],
+        l3: {
+            'current_capacity': [
+                { id: 'theoretical_capacity', name: '理论产能测算' },
+                { id: 'effective_capacity', name: '有效产能评估' },
+                { id: 'oee_analysis', name: 'OEE综合分析' },
+                { id: 'bottleneck_process', name: '瓶颈工序识别' },
+                { id: 'equipment_status', name: '设备状态评估' },
+                { id: 'personnel_config', name: '人员配置评估' }
+            ],
+            'supply_capability': [
+                { id: 'max_output_capacity', name: '最大产出能力' },
+                { id: 'sustainable_capacity', name: '可持续产能' },
+                { id: 'flexibility_assessment', name: '产能弹性评估' },
+                { id: 'quality_capacity', name: '质量合格产能' },
+                { id: 'resource_constraints', name: '资源约束分析' },
+                { id: 'operation_mode', name: '运营模式分析' }
+            ],
+            'capacity_expansion': [
+                { id: 'short_term_expansion', name: '短期扩产潜力' },
+                { id: 'medium_term_expansion', name: '中期扩产潜力' },
+                { id: 'long_term_expansion', name: '长期扩产潜力' },
+                { id: 'peak_capacity_analysis', name: '峰值产能分析' },
+                { id: 'capacity_ceiling', name: '产能天花板分析' }
+            ],
+            'capacity_planning': [
+                { id: 'existing_line_expansion', name: '现有产线扩产' },
+                { id: 'new_line_construction', name: '新建产线方案' },
+                { id: 'oem_consideration', name: '委外加工评估' },
+                { id: 'automation_upgrade', name: '自动化升级' },
+                { id: 'process_optimization', name: '工艺优化挖潜' },
+                { id: 'multi_shift_operation', name: '多班制运营' }
+            ],
+            'investment_decision': [
+                { id: 'capex_estimation', name: '资本支出估算' },
+                { id: 'roi_analysis', name: '投资回报分析' },
+                { id: 'payback_period', name: '回收期测算' },
+                { id: 'npv_calculation', name: 'NPV净现值分析' },
+                { id: 'financing_options', name: '融资方案选择' }
+            ],
+            'risk_simulation': [
+                { id: 'capacity_volatility', name: '产能波动风险' },
+                { id: 'technology_obsolescence', name: '技术淘汰风险' },
+                { id: 'policy_change', name: '政策变化风险' },
+                { id: 'supply_chain_disruption', name: '供应链中断风险' },
+                { id: 'market_competition', name: '市场竞争风险' }
+            ]
+        },
+        l4: {
+            'theoretical_capacity': ['设备铭牌产能', '理论产出计算', '产能利用率'],
+            'effective_capacity': ['良品率修正', '换型时间损耗', '计划停机时间'],
+            'oee_analysis': ['时间开动率', '性能开动率', '质量合格率'],
+            'bottleneck_process': ['化成工序', '涂布工序', '卷绕工序', '分容工序'],
+            'equipment_status': ['设备老化率', '故障频率', '维修成本'],
+            'max_output_capacity': ['极限产能测算', '设备满负荷产出', '产能爬坡极限'],
+            'sustainable_capacity': ['稳定产能水平', '质量标准产能', '可持续运营产能'],
+            'flexibility_assessment': ['产能调节范围', '快速响应能力', '弹性扩产空间'],
+            'quality_capacity': ['A品产能', '合格品产能', '返修品产能'],
+            'resource_constraints': ['电力供应约束', '原料供应约束', '劳动力约束'],
+            'short_term_expansion': ['3个月扩产潜力', '6个月扩产潜力', '12个月扩产潜力'],
+            'existing_line_expansion': ['设备增加', '节拍提升', '良率改善'],
+            'new_line_construction': ['GWh产能投资', '建设周期', '设备选型'],
+            'oem_consideration': ['代工成本', '质量控制', '产能锁定'],
+            'capex_estimation': ['设备投资', '厂房投资', '土地投资', '流动资金'],
+            'roi_analysis': ['年化收益率', '盈亏平衡点', '现金流分析'],
+            'capacity_volatility': ['设备故障情景', '原料短缺情景', '人员流失情景'],
+            'technology_obsolescence': ['固态电池威胁', '钠离子替代', '技术迭代周期']
         }
     }
 };
@@ -1026,6 +1563,14 @@ export const SCENARIO_ONTOLOGY_MAP: Record<string, OntologyData> = {
     'demand_forecast_v3', 'capacity_evaluation_v2', 'smart_scheduling_v4', 'inventory_optimization_v3',
     'supply_chain_collab_v2', 'order_fulfillment_tracking_v2', 'logistics_optimization_v2', 'production_sales_alert_v1'
   ]),
+  'new_project_planning': generateSpecificGraph('new_project_planning', '新项目落地推演分析', [
+    'capacity_evaluation_v2', 'cost_realtime_analyzer_v1', 'npv_calculator_v1', 'location_optimizer_v1',
+    'risk_simulator_v1', 'market_forecast_v2', 'capex_analyzer_v1', 'sensitivity_analysis_v1'
+  ]),
+  'capacity_assessment_prediction': generateSpecificGraph('capacity_assessment_prediction', '产能评估推演预测分析', [
+    'capacity_evaluation_v2', 'demand_forecast_v3', 'oee_analyzer_v1', 'bottleneck_identifier_v1',
+    'equipment_health_monitor_v1', 'roi_calculator_v1', 'production_simulator_v1', 'risk_assessor_v1'
+  ]),
 };
 
 export const RECENT_EXECUTIONS: ExecutionLog[] = [
@@ -1035,6 +1580,191 @@ export const RECENT_EXECUTIONS: ExecutionLog[] = [
   { id: "exec_1004", timestamp: "2023-10-25 13:10:00", task_text: "估算卷绕机#3主轴故障修复时间", status: "success", skills_used: ["repair_time_estimator_v1"], duration: 85, result_summary: "预计45分钟 (专家:张工)" },
   { id: "exec_1005", timestamp: "2023-10-25 13:45:00", task_text: "核算产线A的单瓦时制造成本", status: "success", skills_used: ["cost_realtime_analyzer_v1"], duration: 420, result_summary: "0.34 元/Wh" },
 ];
+
+// ==================== 推演分析节点配置 ====================
+// 定义哪些业务流程节点支持推演分析功能
+
+export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
+  // ========== 新项目落地推演分析节点 ==========
+  {
+    nodeId: 'strategic_decision',
+    nodeName: '战略决策',
+    scenarioId: 'new_project_planning',
+    category: 'investment_decision',
+    description: '基于市场分析和财务测算进行投资决策推演',
+    inputParams: [
+      { id: 'market_growth_rate', name: '市场增长率', description: '目标市场年复合增长率', dataType: 'number', required: true, unit: '%', defaultValue: 15 },
+      { id: 'investment_scale', name: '投资规模', description: '项目总投资金额', dataType: 'number', required: true, unit: '亿元' },
+      { id: 'payback_period', name: '预期回收期', description: '投资回收期要求', dataType: 'number', required: true, unit: '年', defaultValue: 5 },
+      { id: 'strategic_priority', name: '战略优先级', description: '项目战略重要性评分', dataType: 'number', required: true, unit: '分', defaultValue: 8 },
+    ],
+    outputMetrics: ['决策得分', '战略匹配度', '投资优先级'],
+    supportedSkills: ['market_forecast_v1', 'npv_calculator_v1', 'risk_assessor_v1']
+  },
+  {
+    nodeId: 'site_selection',
+    nodeName: '选址评估',
+    scenarioId: 'new_project_planning',
+    category: 'investment_decision',
+    description: '评估不同选址方案的综合优劣势',
+    inputParams: [
+      { id: 'land_cost', name: '土地成本', description: '单位土地成本', dataType: 'number', required: true, unit: '元/㎡' },
+      { id: 'logistics_distance', name: '物流距离', description: '距主要客户平均距离', dataType: 'number', required: true, unit: 'km' },
+      { id: 'labor_availability', name: '劳动力可得性', description: '当地劳动力供给评分', dataType: 'number', required: true, unit: '分', defaultValue: 7 },
+      { id: 'policy_support', name: '政策支持力度', description: '地方政府政策支持评分', dataType: 'number', required: true, unit: '分', defaultValue: 8 },
+    ],
+    outputMetrics: ['选址综合评分', '成本指数', '供应链效率指数'],
+    supportedSkills: ['site_evaluator_v1', 'logistics_optimizer_v1']
+  },
+  {
+    nodeId: 'financial_profitability',
+    nodeName: '盈利能力分析',
+    scenarioId: 'new_project_planning',
+    category: 'financial_analysis',
+    description: '评估项目财务可行性和盈利能力',
+    inputParams: [
+      { id: 'revenue_forecast', name: '收入预测', description: '年度收入预测', dataType: 'number', required: true, unit: '亿元' },
+      { id: 'capex', name: '资本支出', description: '初始资本支出', dataType: 'number', required: true, unit: '亿元' },
+      { id: 'opex_ratio', name: '运营成本率', description: '运营成本占收入比例', dataType: 'number', required: true, unit: '%', defaultValue: 75 },
+      { id: 'discount_rate', name: '折现率', description: '项目折现率', dataType: 'number', required: true, unit: '%', defaultValue: 10 },
+    ],
+    outputMetrics: ['NPV', 'IRR', '投资回收期', 'ROIC'],
+    supportedSkills: ['npv_calculator_v1', 'financial_model_v1']
+  },
+  {
+    nodeId: 'risk_assessment',
+    nodeName: '风险评估',
+    scenarioId: 'new_project_planning',
+    category: 'risk_assessment',
+    description: '识别和量化项目潜在风险',
+    inputParams: [
+      { id: 'market_volatility', name: '市场波动率', description: '市场需求波动程度', dataType: 'number', required: true, unit: '%', defaultValue: 20 },
+      { id: 'technology_maturity', name: '技术成熟度', description: '技术成熟度评分', dataType: 'number', required: true, unit: '分', defaultValue: 8 },
+      { id: 'regulatory_risk', name: '政策风险', description: '政策变化风险评分', dataType: 'number', required: true, unit: '分', defaultValue: 5 },
+      { id: 'competition_intensity', name: '竞争强度', description: '市场竞争激烈程度', dataType: 'number', required: true, unit: '分', defaultValue: 7 },
+    ],
+    outputMetrics: ['综合风险指数', '市场风险', '技术风险', '财务风险'],
+    supportedSkills: ['risk_assessor_v1', 'scenario_analyzer_v1']
+  },
+
+  // ========== 产能评估推演预测分析节点 ==========
+  {
+    nodeId: 'current_capacity',
+    nodeName: '现有产能评估',
+    scenarioId: 'capacity_assessment_prediction',
+    category: 'capacity_planning',
+    description: '评估现有产线产能状况和瓶颈',
+    inputParams: [
+      { id: 'current_oee', name: '当前OEE', description: '设备综合效率', dataType: 'number', required: true, unit: '%', defaultValue: 85 },
+      { id: 'daily_operating_hours', name: '日运行小时', description: '产线日运行时间', dataType: 'number', required: true, unit: '小时', defaultValue: 22 },
+      { id: 'planned_downtime', name: '计划停机时间', description: '月度计划维护时间', dataType: 'number', required: true, unit: '小时', defaultValue: 48 },
+      { id: 'product_mix', name: '产品组合', description: '各产品型号占比', dataType: 'string', required: true },
+    ],
+    outputMetrics: ['理论产能', '有效产能', '产能利用率', '瓶颈工序'],
+    supportedSkills: ['oee_analyzer_v1', 'bottleneck_identifier_v1', 'capacity_calculator_v1']
+  },
+  {
+    nodeId: 'capacity_expansion',
+    nodeName: '产能扩展潜力',
+    scenarioId: 'capacity_assessment_prediction',
+    category: 'capacity_planning',
+    description: '分析产能扩展潜力和扩产方案',
+    inputParams: [
+      { id: 'expansion_capacity', name: '扩产容量', description: '计划扩产容量', dataType: 'number', required: true, unit: 'GWh' },
+      { id: 'unit_investment_cost', name: '单位投资成本', description: '单位产能投资成本', dataType: 'number', required: true, unit: '亿元/GWh' },
+      { id: 'construction_period', name: '建设周期', description: '产能建设周期', dataType: 'number', required: true, unit: '月', defaultValue: 18 },
+      { id: 'demand_growth_scenario', name: '需求增长情景', description: '需求增长预测情景', dataType: 'string', required: true, defaultValue: '基准情景' },
+    ],
+    outputMetrics: ['扩产潜力', '投资NPV', 'IRR', '投资回收期'],
+    supportedSkills: ['investment_optimizer_v1', 'timeline_planner_v1']
+  },
+  {
+    nodeId: 'investment_decision',
+    nodeName: '投资决策推演',
+    scenarioId: 'capacity_assessment_prediction',
+    category: 'investment_decision',
+    description: '产能扩建投资决策分析',
+    inputParams: [
+      { id: 'capex_amount', name: '资本支出', description: '总投资金额', dataType: 'number', required: true, unit: '亿元' },
+      { id: 'financing_rate', name: '融资成本', description: '年化融资成本', dataType: 'number', required: true, unit: '%', defaultValue: 5 },
+      { id: 'tax_rate', name: '税率', description: '企业所得税率', dataType: 'number', required: true, unit: '%', defaultValue: 25 },
+      { id: 'project_lifecycle', name: '项目周期', description: '项目运营周期', dataType: 'number', required: true, unit: '年', defaultValue: 10 },
+    ],
+    outputMetrics: ['投资NPV', 'IRR', '投资回收期', '产能达成率'],
+    supportedSkills: ['investment_optimizer_v1', 'timeline_planner_v1']
+  },
+  {
+    nodeId: 'risk_simulation',
+    nodeName: '风险情景模拟',
+    scenarioId: 'capacity_assessment_prediction',
+    category: 'risk_assessment',
+    description: '模拟不同风险情景下的产能表现',
+    inputParams: [
+      { id: 'risk_scenario', name: '风险情景', description: '选择模拟的风险情景', dataType: 'string', required: true, defaultValue: '基准情景' },
+      { id: 'volatility_rate', name: '波动率', description: '市场需求波动率', dataType: 'number', required: true, unit: '%', defaultValue: 15 },
+      { id: 'confidence_level', name: '置信水平', description: '统计置信水平', dataType: 'number', required: true, unit: '%', defaultValue: 95 },
+    ],
+    outputMetrics: ['风险值VaR', '情景概率', '预期损失', '应对建议'],
+    supportedSkills: ['risk_assessor_v1', 'scenario_analyzer_v1']
+  },
+
+  // ========== 产销匹配协同推演节点 ==========
+  {
+    nodeId: 'demand_forecast',
+    nodeName: '需求预测',
+    scenarioId: 'production_sales_match',
+    category: 'demand_forecast',
+    description: '基于历史数据和市场信息进行需求预测',
+    inputParams: [
+      { id: 'historical_orders', name: '历史订单数据', description: '过去12个月订单数据', dataType: 'file', required: true, source: 'file_import' },
+      { id: 'seasonality_factor', name: '季节性因子', description: '需求季节性波动系数', dataType: 'number', required: true, unit: '%', defaultValue: 15 },
+      { id: 'market_growth', name: '市场增长率', description: '预期市场增长率', dataType: 'number', required: true, unit: '%', defaultValue: 20 },
+      { id: 'customer_forecast', name: '客户预测', description: '大客户提供的预测数据', dataType: 'file', required: false, source: 'file_import' },
+    ],
+    outputMetrics: ['预测准确度', '月度需求量', '季度趋势'],
+    supportedSkills: ['demand_forecast_v1', 'seasonality_analyzer_v1']
+  },
+  {
+    nodeId: 'capacity_planning',
+    nodeName: '产能规划',
+    scenarioId: 'production_sales_match',
+    category: 'production_scheduling',
+    description: '平衡需求与产能，制定生产计划',
+    inputParams: [
+      { id: 'forecasted_demand', name: '预测需求', description: '各产品预测需求量', dataType: 'number', required: true, unit: 'MWh' },
+      { id: 'available_capacity', name: '可用产能', description: '各产线可用产能', dataType: 'number', required: true, unit: 'MWh' },
+      { id: 'priority_rules', name: '优先级规则', description: '订单优先级规则', dataType: 'string', required: true },
+      { id: 'changeover_time', name: '换型时间', description: '产品换型所需时间', dataType: 'number', required: true, unit: '小时', defaultValue: 4 },
+    ],
+    outputMetrics: ['产能利用率', '订单满足率', '换型次数', '生产计划'],
+    supportedSkills: ['aps_optimizer_v1', 'scheduler_v1']
+  },
+  {
+    nodeId: 'inventory_management',
+    nodeName: '库存管理',
+    scenarioId: 'production_sales_match',
+    category: 'supply_chain',
+    description: '优化成品和原材料库存水平',
+    inputParams: [
+      { id: 'current_inventory', name: '当前库存', description: '各物料当前库存量', dataType: 'file', required: true, source: 'file_import' },
+      { id: 'service_level_target', name: '服务水平目标', description: '目标订单满足率', dataType: 'number', required: true, unit: '%', defaultValue: 95 },
+      { id: 'holding_cost_rate', name: '库存持有成本率', description: '年度库存持有成本比例', dataType: 'number', required: true, unit: '%', defaultValue: 15 },
+      { id: 'stockout_cost', name: '缺货成本', description: '单位缺货成本', dataType: 'number', required: true, unit: '元/件' },
+    ],
+    outputMetrics: ['最优库存水平', '库存周转天数', '库存成本', '缺货风险'],
+    supportedSkills: ['inventory_optimizer_v1', 'safety_stock_calculator_v1']
+  },
+];
+
+// 根据节点ID获取推演配置
+export function getSimulationConfig(nodeId: string): import('./types').SimulationNodeConfig | undefined {
+  return SIMULATION_NODES.find(config => config.nodeId === nodeId);
+}
+
+// 判断节点是否为推演分析节点
+export function isSimulationNode(nodeId: string): boolean {
+  return SIMULATION_NODES.some(config => config.nodeId === nodeId);
+}
 
 // ==================== 原子化业务语义库 ====================
 // 企业统一的语义标准 - 不可再分的业务因子
