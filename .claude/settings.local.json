@@ -12,7 +12,8 @@
       "Bash(ls:*)",
       "Bash(tail:*)",
       "Bash(pkill:*)",
-      "Bash(sleep 5:*)"
+      "Bash(sleep 5:*)",
+      "Bash(gh auth:*)"
     ]
   }
 }
